@@ -3062,7 +3062,8 @@ export class ChatListItemRenderer extends Disposable implements ITreeRenderer<Ch
 			variables,
 			contentReferences,
 			modelId,
-			domNode: undefined
+			domNode: undefined,
+			showAppliedInstructions: true
 		});
 	}
 

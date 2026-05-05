@@ -23,6 +23,7 @@ export interface IChatAttachmentsContentPartOptions {
 	readonly modelId?: string;
 	readonly domNode?: HTMLElement;
 	readonly limit?: number;
+	readonly showAppliedInstructions?: boolean;
 }
 
 export class ChatAttachmentsContentPart extends Disposable {
@@ -36,6 +37,7 @@ export class ChatAttachmentsContentPart extends Disposable {
 	private readonly contentReferences: ReadonlyArray<IChatContentReference>;
 	private readonly modelId?: string;
 	private readonly limit?: number;
+	private readonly showAppliedInstructions: boolean;
 	public readonly domNode: HTMLElement | undefined;
 
 	public contextMenuHandler?: (attachment: IChatRequestVariableEntry, event: MouseEvent) => void;
@@ -51,6 +53,7 @@ export class ChatAttachmentsContentPart extends Disposable {
 		this.contentReferences = options.contentReferences ?? [];
 		this.modelId = options.modelId;
 		this.limit = options.limit;
+		this.showAppliedInstructions = options.showAppliedInstructions ?? false;
 		this.domNode = options.domNode ?? dom.$('.chat-attached-context');
 
 		this._contextResourceLabels = this._register(this.instantiationService.createInstance(ResourceLabels, { onDidChangeVisibility: this._onDidChangeVisibility.event }));
@@ -86,6 +89,10 @@ export class ChatAttachmentsContentPart extends Disposable {
 
 		if (hasMoreAttachments) {
 			this.renderShowMoreButton(container);
+		}
+
+		if (this.showAppliedInstructions) {
+			this.renderAppliedInstructions(container);
 		}
 	}
 
@@ -180,6 +187,24 @@ export class ChatAttachmentsContentPart extends Disposable {
 
 		container.appendChild(showMoreButton);
 		this.attachedContextDisposables.add({ dispose: () => showMoreButton.remove() });
+	}
+
+	private renderAppliedInstructions(container: HTMLElement): void {
+		const appliedInstructions = this._variables.filter(
+			v => (isPromptFileVariableEntry(v) || isPromptTextVariableEntry(v)) && v.automaticallyAdded
+		);
+		if (!appliedInstructions.length) {
+			return;
+		}
+		for (const instruction of appliedInstructions) {
+			if (isPromptFileVariableEntry(instruction)) {
+				const widget = this.instantiationService.createInstance(PromptFileAttachmentWidget, instruction, undefined, { shouldFocusClearButton: false, supportsDeletion: false }, container, this._contextResourceLabels);
+				this.attachedContextDisposables.add(widget);
+			} else if (isPromptTextVariableEntry(instruction)) {
+				const widget = this.instantiationService.createInstance(PromptTextAttachmentWidget, instruction, undefined, { shouldFocusClearButton: false, supportsDeletion: false }, container, this._contextResourceLabels);
+				this.attachedContextDisposables.add(widget);
+			}
+		}
 	}
 
 	private renderAttachment(attachment: IChatRequestVariableEntry, container: HTMLElement) {
